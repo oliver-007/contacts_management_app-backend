@@ -32,6 +32,10 @@ const contactSchema = new Schema(
       type: String,
       required: true,
     },
+    isFavorite: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

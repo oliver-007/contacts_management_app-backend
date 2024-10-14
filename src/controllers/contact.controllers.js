@@ -169,75 +169,6 @@ const updateContactDetails = asyncHandler(async (req, res) => {
     );
 });
 
-// ++++++++ UPDATE AVATAR +++++++++
-const updateContactAvatar = asyncHandler(async (req, res) => {
-  const updatedAvatarLocalPath = req.file?.path;
-
-  // console.log("updated Avatar Local Path ------", updatedAvatarLocalPath);
-
-  if (!updatedAvatarLocalPath) {
-    throw new ApiError(400, "updated avatar local path missing !");
-  }
-
-  // ++++++ UPDATED FILE UPLOAD ON CLOUDINARY +++++
-  const updatedAvatarCloudinaryResponse = await uploadOnCloudinary(
-    updatedAvatarLocalPath
-  );
-
-  if (
-    !(updatedAvatarCloudinaryResponse && updatedAvatarCloudinaryResponse.url)
-  ) {
-    throw new ApiError(
-      400,
-      "Updated-avatar upload on cloudinary FAILED ( url & public_id not found) !"
-    );
-  }
-
-  // console.log(
-  //   "updated_Avatar_Cloudinary_Response ----- ",
-  //   updatedAvatarCloudinaryResponse
-  // );
-
-  const updatedAvatarCloudinaryUrl = updatedAvatarCloudinaryResponse?.url;
-
-  // +++++++ CURRENT CONTACT-ID +++++++
-  const cId = req.query;
-
-  const contactExist = await Contact.findById(cId);
-
-  const currentUserPreviousAvatarPublicId = contactExist?.avatar_public_id;
-  // console.log(
-  //   "currentUserPreviousAvatar public id =-=-=- --",
-  //   currentUserPreviousAvatarPublicId
-  // );
-
-  const updatedContact = await Contact.findByIdAndUpdate(
-    cId,
-    {
-      $set: {
-        avatar: updatedAvatarCloudinaryUrl,
-      },
-    },
-    {
-      new: true,
-    }
-  ).select("-avatar_public_id");
-
-  // DELETE PREVIOUS AVATAR FROM CLOUDINARY AFTER UPDATING AVATAR
-  currentUserPreviousAvatarPublicId &&
-    (await deleteFromCloudinary(currentUserPreviousAvatarPublicId, "image"));
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        updatedContact,
-        "Contact Avatar updated Successfully "
-      )
-    );
-});
-
 // +++++++++ GET ALL CONTACTS +++++++++++
 const getAllContacts = asyncHandler(async (_, res) => {
   const totalContacts = await Contact.countDocuments();
@@ -255,10 +186,57 @@ const getAllContacts = asyncHandler(async (_, res) => {
     );
 });
 
+// +++++++++++ FAVORITE CONTACT TOGGLE ++++++++++++++
+const favoriteToggle = asyncHandler(async (req, res) => {
+  const { cId } = req.query;
+
+  if (!cId) {
+    throw new ApiError(400, "Contact Id is required !!!");
+  }
+
+  if (!isValidObjectId(cId)) {
+    throw new ApiError(400, "Invalid Contact Id !!!");
+  }
+
+  const contactExist = await Contact.findById(cId);
+
+  if (!contactExist) {
+    return res.status(400).json(new ApiError(400, "Contact not found !!"));
+  }
+
+  const favoriteState = contactExist.isFavorite;
+
+  const updatedContact = await Contact.findByIdAndUpdate(
+    cId,
+    {
+      $set: {
+        isFavorite: !favoriteState,
+      },
+    },
+    { new: true }
+  );
+
+  const isFavoriteState = {
+    isFavorite: updatedContact.isFavorite,
+  };
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        isFavoriteState,
+        isFavoriteState.isFavorite
+          ? "Marked as Favorite successfully."
+          : "Removed from Favorite contact list successfully."
+      )
+    );
+});
+
 export {
   getAllContacts,
   createContact,
   deleteContact,
   updateContactDetails,
-  updateContactAvatar,
+  favoriteToggle,
 };

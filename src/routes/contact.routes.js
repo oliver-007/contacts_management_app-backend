@@ -2,9 +2,9 @@ import { Router } from "express";
 import {
   createContact,
   updateContactDetails,
-  updateContactAvatar,
   getAllContacts,
   deleteContact,
+  favoriteToggle,
 } from "../controllers/contact.controllers.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
@@ -31,5 +31,8 @@ router.route("/delete-contact").delete(deleteContact);
 
 // +++++++++ GET ALL CONTACTS +++++++++++
 router.route("/").get(getAllContacts);
+
+// +++++++++++ FAVORITE TOGGLER ROUTE ++++++++++++
+router.route("/favorite-toggle").patch(favoriteToggle);
 
 export default router;
